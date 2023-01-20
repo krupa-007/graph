@@ -1,0 +1,24 @@
+{
+  "graph": [],
+  "links": [
+    {"source": 0, "target": 1, "value":1},
+    {"source": 0, "target": 1, "value":2},
+    {"source": 0, "target": 1, "value":3},
+    {"source": 0, "target": 1, "value":4},
+    {"source": 0, "target": 2},
+    {"source": 0, "target": 3},
+    {"source": 0, "target": 4},
+    {"source": 0, "target": 5},
+    {"source": 0, "target": 6}
+    ],
+  "nodes": [
+    {"index1":0, "size": 120, "score": 1, "id": "WF CB Client A", "type": "circle"},
+    {"index1":1, "size": 60, "score": 0.2, "id": "Alpha Bank", "type": "circle"},
+    {"index1":2, "size": 40, "score": 0.8, "id": "Beta Bank", "type": "circle"},
+    {"index1":3, "size": 20, "score": 0.8, "id": "Gamma LLC", "type": "square"},
+    {"index1":4, "size": 20, "score": 0.6, "id": "Delta Legal LLP", "type": "square"},
+    {"index1":5, "size": 20, "score": 0.6, "id": "Theta Utilities Co.", "type": "square"},
+    {"index1":6, "size": 20, "score": 0.6, "id": "Sigma Inc.", "type": "square"}],
+  "directed": false,
+  "multigraph": false
+}

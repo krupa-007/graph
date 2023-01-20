@@ -1,0 +1,31 @@
+{
+  "graph": [],
+  "links": [
+    {"source": 0, "target": 1},
+    {"source": 0, "target": 2},
+    {"source": 0, "target": 3},
+    {"source": 3, "target": 4},
+    {"source": 3, "target": 5},
+    {"source": 3, "target": 6},
+    {"source": 3, "target": 7},
+    {"source": 1, "target": 11},
+    {"source": 1, "target": 12},
+    {"source": 0, "target": 10}
+    ],
+  "nodes": [
+    {"index1":0, "size": 200, "score": 1, "id": "Co-Founder & CEO", "type": "circle"},
+    {"index1":1, "size": 100, "score": 0.8, "id": "Co-Founder & CTO", "type": "circle"},
+    {"index1":2, "size": 100, "score": 0.8, "id": "Co-Founder & CFO", "type": "circle"},
+    {"index1":3, "size": 100, "score": 0.8, "id": "Co-Founder & COO", "type": "circle"},
+    {"index1":4, "size": 30, "score": 0.6, "id": "Head of Supply", "type": "square"},
+    {"index1":5, "size": 30, "score": 0.6, "id": "Head of New Business", "type": "square"},
+    {"index1":6, "size": 30, "score": 0.6, "id": "Head of HR", "type": "square"},
+    {"index1":7, "size": 30, "score": 0.6, "id": "Head of Food Delivery", "type": "square"},
+    {"index1":8, "size": 10, "score": 0.4, "id": "Compliance Officer", "type": "square"},
+    {"index1":9, "size": 10, "score": 0.4, "id": "General Council", "type": "square"},
+    {"index1":10, "size": 10, "score": 0.4, "id": "Head of Customer Experience", "type": "square"},
+    {"index1":11, "size": 10, "score": 0.4, "id": "VP Technology - Data", "type": "square"},
+    {"index1":12, "size": 10, "score": 0.4, "id": "VP Technology - Apps", "type": "square"}],
+  "directed": false,
+  "multigraph": false
+}

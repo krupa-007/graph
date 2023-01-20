@@ -1,0 +1,25 @@
+{
+  "graph": [],
+  "links": [
+    {"source": 0, "target": 1},
+    {"source": 0, "target": 2},
+    {"source": 0, "target": 3},
+    {"source": 1, "target": 4},
+    {"source": 1, "target": 5},
+    {"source": 1, "target": 6},
+    {"source": 2, "target": 7},
+    {"source": 2, "target": 8}
+    ],
+  "nodes": [
+    {"index1":0, "size": 120, "score": 1, "id": "Sales", "type": "circle"},
+    {"index1":1, "size": 60, "score": 0.8, "id": "Retail", "type": "circle"},
+    {"index1":2, "size": 40, "score": 0.8, "id": "E-Commerce Partners", "type": "circle"},
+    {"index1":3, "size": 20, "score": 0.8, "id": "D2C Online", "type": "circle"},
+    {"index1":4, "size": 20, "score": 0.6, "id": "Walmart", "type": "square"},
+    {"index1":5, "size": 20, "score": 0.6, "id": "Costco", "type": "square"},
+    {"index1":6, "size": 20, "score": 0.6, "id": "Target", "type": "square"},
+    {"index1":7, "size": 30, "score": 0.4, "id": "Amazon", "type": "square"},
+    {"index1":8, "size": 10, "score": 0.4, "id": "Others", "type": "square"}],
+  "directed": false,
+  "multigraph": false
+}
