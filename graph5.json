@@ -1,0 +1,27 @@
+{
+  "graph": [],
+  "links": [
+    {"source": 0, "target": 1, "score": 0.665},
+    {"source": 1, "target": 2, "score": 0.667},
+    {"source": 2, "target": 3, "score": 0.334},
+    {"source": 3, "target": 4, "score": 0.332},
+    {"source": 4, "target": 5, "score": 0.1},
+    {"source": 5, "target": 6, "score": 0.665},
+    {"source": 6, "target": 7, "score": 0.665},
+    {"source": 7, "target": 8, "score": 0.665},
+    {"source": 7, "target": 8, "score": 0.2},
+    {"source": 7, "target": 8, "score": 0.2}
+    ],
+  "nodes": [
+    {"index1":0, "size": 120, "score": 0.665, "id": "0Sales", "type": "circle"},
+    {"index1":1, "size": 60, "score": 0.667, "id": "1Retail", "type": "triangle-up"},
+    {"index1":2, "size": 40, "score": 0.334, "id": "2E-Commerce Partners", "type": "diamond"},
+    {"index1":3, "size": 120, "score": 0.332, "id": "3D2C Online", "type": "cross"},
+    {"index1":4, "size": 20, "score": 0.1, "id": "4Walmart", "type": "triangle-down"},
+    {"index1":5, "size": 20, "score": 0.6, "id": "5Costco", "type": "square"},
+    {"index1":6, "size": 120, "score": 0.6, "id": "6Target", "type": "square"},
+    {"index1":7, "size": 30, "score": 0.4, "id": "7Amazon", "type": "square"},
+    {"index1":8, "size": 10, "score": 0.4, "id": "8Others", "type": "square"}],
+  "directed": true,
+  "multigraph": true
+}
