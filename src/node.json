@@ -1,0 +1,42 @@
+[
+  {
+    id: "1",
+    data: { label: "1sdfsdfsw wefwfwf wfwcsdcwecccsdc" },
+    type: "input",
+    position:{ x: 100, y: 100 },
+	style: {
+      backgroundColor: "orange",
+      color: "white",
+    },
+  },
+  {
+    id: "2",
+    data: { label: "2" },
+    type: "default",
+    position:{ x: 100, y: 200 },
+	style: {
+      backgroundColor: "red",
+      color: "white",
+    }
+  },
+  {
+    id: "3",
+    data: { label: "3" },
+    type: "default",
+    position:{ x: 100, y: 300 },
+	style: {
+      backgroundColor: "blue",
+      color: "white",
+    }
+  },
+  {
+    id: "4",
+    data: { label: "4" },
+    type: "output",
+    position:{ x: 100, y: 400 },
+	style: {
+      backgroundColor: "green",
+      color: "white",
+    },
+  }
+]
