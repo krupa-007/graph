@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Process Editor</title>
+  <script>
+    function flattenJson(obj, prefix = "") {
+      let result = {};
+      for (const key in obj) {
+        const newKey = prefix ? `${prefix}.${key}` : key;
+        if (typeof obj[key] === "object" && obj[key] !== null) {
+          Object.assign(result, flattenJson(obj[key], newKey));
+        } else {
+          result[newKey] = obj[key];
+        }
+      }
+      return result;
+    }
+
+    function isSimilar(field1, field2) {
+      const lastSegment1 = field1.split(".").pop();
+      const lastSegment2 = field2.split(".").pop();
+
+      if (lastSegment1 === lastSegment2 && field1 !== field2) return true;
+
+      const matchCount = [...field1].filter(ch => field2.includes(ch)).length;
+      const similarity = matchCount / Math.max(field1.length, field2.length);
+      return similarity >= 0.75 && field1 !== field2;
+    }
+
+    let processes = [];
+    let highlightedField = null;
+
+    function addProcess() {
+      const name = `Process ${processes.length + 1}`;
+      processes.push({ name, subprocesses: [], fields: [], sequence: processes.length + 1 });
+      render();
+    }
+
+    function addSubProcess(pIndex) {
+      const process = processes[pIndex];
+      process.subprocesses.push({
+        name: `Sub ${process.subprocesses.length + 1}`,
+        fields: [],
+        sequence: process.subprocesses.length + 1
+      });
+      render();
+    }
+
+    function handleJsonUpload(event, isSub, pIndex, sIndex) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        const json = JSON.parse(reader.result);
+        const keys = Object.keys(flattenJson(json));
+        if (isSub) {
+          processes[pIndex].subprocesses[sIndex].fields = keys;
+        } else {
+          processes[pIndex].fields = keys;
+        }
+        render();
+      };
+      reader.readAsText(file);
+    }
+
+    function renderField(field, pIndex, sIndex, idx) {
+      let highlightClass = "bg-gray-200 text-gray-700";
+      if (highlightedField) {
+        if (field === highlightedField) {
+          highlightClass = "bg-green-500 text-white";
+        } else if (isSimilar(field, highlightedField)) {
+          highlightClass = "bg-orange-500 text-white";
+        }
+      }
+      return `<span onclick="highlightField('${field}')" class="inline-block px-2 py-1 m-1 rounded-full text-sm cursor-pointer ${highlightClass} style="margin: 5px">${field}</span>`;
+    }
+
+    function highlightField(field) {
+      highlightedField = field;
+      render();
+    }
+
+    function updateName(event, pIndex, sIndex = null) {
+      const value = event.target.value;
+      if (sIndex === null) {
+        processes[pIndex].name = value;
+      } else {
+        processes[pIndex].subprocesses[sIndex].name = value;
+      }
+    }
+
+    function render() {
+      const container = document.getElementById("editor");
+      container.innerHTML = '';
+      processes.forEach((proc, pIndex) => {
+        const processDiv = document.createElement("div");
+        processDiv.className = "border rounded shadow p-4 m-2 bg-white";
+        processDiv.innerHTML = `
+          <div class="mb-2">
+            <input class="border px-2 py-1 rounded w-full" value="${proc.name}" onchange="updateName(event, ${pIndex})">
+            <input type="file" accept=".json" onchange="handleJsonUpload(event, false, ${pIndex})">
+          </div>
+          <div class="text-xs text-gray-500 mb-2">Sequence: ${proc.sequence}</div>
+          <div>${proc.fields.map((f, idx) => renderField(f, pIndex, null, idx)).join('')}</div>
+          <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mt-2" onclick="addSubProcess(${pIndex})">Add Sub-process</button>
+        `;
+
+        proc.subprocesses.forEach((sub, sIndex) => {
+          const subDiv = document.createElement("div");
+          subDiv.className = "border rounded p-2 m-2 bg-gray-100";
+          subDiv.innerHTML = `
+            <input class="border px-2 py-1 rounded w-full" value="${sub.name}" onchange="updateName(event, ${pIndex}, ${sIndex})">
+            <input type="file" accept=".json" onchange="handleJsonUpload(event, true, ${pIndex}, ${sIndex})">
+            <div class="text-xs text-gray-500 mb-1">Sequence: ${sub.sequence}</div>
+            <div>${sub.fields.map((f, idx) => renderField(f, pIndex, sIndex, idx)).join('')}</div>
+          `;
+          processDiv.appendChild(subDiv);
+        });
+
+        container.appendChild(processDiv);
+      });
+    }
+  </script>
+  <script>
+    window.onload = () => {
+      document.getElementById("addBtn").addEventListener("click", addProcess);
+    };
+  </script>
+  <style>
+    .bg-gray-200 { background-color: #e5e7eb; color: #374151; }
+    .bg-green-500 { background-color: #10b981; color: white; }
+    .bg-orange-500 { background-color: #f97316; color: white; }
+  </style>
+</head>
+<body class="p-4">
+  <button id="addBtn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Add Process</button>
+  <div id="editor" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+</body>
+</html>
