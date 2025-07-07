@@ -1,140 +1,560 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Process Editor</title>
-  <script>
-    function flattenJson(obj, prefix = "") {
-      let result = {};
-      for (const key in obj) {
-        const newKey = prefix ? `${prefix}.${key}` : key;
-        if (typeof obj[key] === "object" && obj[key] !== null) {
-          Object.assign(result, flattenJson(obj[key], newKey));
-        } else {
-          result[newKey] = obj[key];
-        }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Process Editor</title>
+    <link rel="stylesheet" href="indexStyle.css" />
+    <script>
+      let processes = [];
+      let highlightedField = null;
+
+      function removeProcess(pIndex) {
+        processes.splice(pIndex, 1); // Remove the process at the given index
+        render(); // Re-render the UI
       }
-      return result;
-    }
 
-    function isSimilar(field1, field2) {
-      const lastSegment1 = field1.split(".").pop();
-      const lastSegment2 = field2.split(".").pop();
+      function removeSubProcess(pIndex, sIndex) {
+        processes[pIndex].subprocesses.splice(sIndex, 1); // Remove the subprocess at the given index
+        render(); // Re-render the UI
+      }
 
-      if (lastSegment1 === lastSegment2 && field1 !== field2) return true;
-
-      const matchCount = [...field1].filter(ch => field2.includes(ch)).length;
-      const similarity = matchCount / Math.max(field1.length, field2.length);
-      return similarity >= 0.75 && field1 !== field2;
-    }
-
-    let processes = [];
-    let highlightedField = null;
-
-    function addProcess() {
-      const name = `Process ${processes.length + 1}`;
-      processes.push({ name, subprocesses: [], fields: [], sequence: processes.length + 1 });
-      render();
-    }
-
-    function addSubProcess(pIndex) {
-      const process = processes[pIndex];
-      process.subprocesses.push({
-        name: `Sub ${process.subprocesses.length + 1}`,
-        fields: [],
-        sequence: process.subprocesses.length + 1
-      });
-      render();
-    }
-
-    function handleJsonUpload(event, isSub, pIndex, sIndex) {
-      const file = event.target.files[0];
-      const reader = new FileReader();
-      reader.onload = () => {
-        const json = JSON.parse(reader.result);
-        const keys = Object.keys(flattenJson(json));
-        if (isSub) {
-          processes[pIndex].subprocesses[sIndex].fields = keys;
-        } else {
-          processes[pIndex].fields = keys;
+      // Function to flatten a nested JSON object into a single-level object
+      function flattenJson(obj, prefix = "") {
+        let result = {};
+        for (const key in obj) {
+          const newKey = prefix ? `${prefix}.${key}` : key;
+          if (typeof obj[key] === "object" && obj[key] !== null) {
+            Object.assign(result, flattenJson(obj[key], newKey));
+          } else {
+            result[newKey] = obj[key];
+          }
         }
+        return result;
+      }
+
+      function updateProcessName(pIndex, newName) {
+        processes[pIndex].name = newName; // Update the process name
+      }
+
+      function updateSubProcessName(pIndex, sIndex, newName) {
+        processes[pIndex].subprocesses[sIndex].name = newName; // Update the subprocess name
+      }
+
+      // Function to add a new process
+      function addProcess() {
+        const name = `Process ${processes.length + 1}`;
+        processes.push({
+          name,
+          subprocesses: [],
+          fields: [],
+          sequence: processes.length + 1,
+        });
         render();
-      };
-      reader.readAsText(file);
-    }
+      }
 
-    function renderField(field, pIndex, sIndex, idx) {
-      let highlightClass = "bg-gray-200 text-gray-700";
-      if (highlightedField) {
-        if (field === highlightedField) {
-          highlightClass = "bg-green-500 text-white";
-        } else if (isSimilar(field, highlightedField)) {
-          highlightClass = "bg-orange-500 text-white";
+      // Function to add a new subprocess
+      function addSubProcess(pIndex) {
+        const process = processes[pIndex];
+        process.subprocesses.push({
+          name: `Sub ${process.subprocesses.length + 1}`,
+          fields: [],
+          sequence: process.subprocesses.length + 1,
+        });
+        render();
+      }
+
+      // Function to handle JSON file uploads
+      function handleJsonUpload(event, isSub, pIndex, sIndex) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          const json = JSON.parse(reader.result);
+          const keys = Object.keys(flattenJson(json)); // Flattened structure for rendering
+
+          if (isSub) {
+            processes[pIndex].subprocesses[sIndex].fields = keys.map((key) => ({
+              name: key, // Initialize field name
+              description: "", // Default to empty string
+              dataType: "string", // Default to "string"
+              validation: "", // Default to empty string
+            }));
+            processes[pIndex].subprocesses[sIndex].originalData = json; // Store original JSON
+            processes[pIndex].subprocesses[sIndex].fileName = file.name;
+          } else {
+            processes[pIndex].fields = keys.map((key) => ({
+              name: key, // Initialize field name
+              description: "", // Default to empty string
+              dataType: "string", // Default to "string"
+              validation: "", // Default to empty string
+            }));
+            processes[pIndex].originalData = json; // Store original JSON
+            processes[pIndex].fileName = file.name;
+          }
+          render();
+        };
+        reader.readAsText(file);
+      }
+
+      // Function to save the session into a single JSON structure
+      function saveSession() {
+        const sessionData = processes.map((process) => ({
+          name: process.name,
+          fileName: process.fileName || null,
+          originalData: process.originalData, // Save original JSON
+          fields: process.fields.map((field) => ({
+            name: field.name || "", // Ensure the field name is stored as a string
+            description: field.description || "", // Default to empty string
+            dataType: field.dataType || "string", // Default to "string"
+            validation: field.validation || "", // Default to empty string
+          })),
+          subprocesses: process.subprocesses.map((sub) => ({
+            name: sub.name,
+            fileName: sub.fileName || null,
+            originalData: sub.originalData, // Save original JSON
+            fields: sub.fields.map((field) => ({
+              name: field.name || "", // Ensure the field name is stored as a string
+              description: field.description || "", // Default to empty string
+              dataType: field.dataType || "string", // Default to "string"
+              validation: field.validation || "", // Default to empty string
+            })),
+          })),
+        }));
+
+        const blob = new Blob([JSON.stringify(sessionData, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "session.json";
+        a.click();
+        URL.revokeObjectURL(url);
+
+        alert("Session saved successfully!");
+      }
+
+      // Function to load the session from a JSON file
+      async function loadSession() {
+        const [fileHandle] = await window.showOpenFilePicker({
+          types: [
+            {
+              description: "JSON Files",
+              accept: { "application/json": [".json"] },
+            },
+          ],
+        });
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        const sessionData = JSON.parse(text);
+
+        processes = sessionData.map((process) => ({
+          name: process.name,
+          fileName: process.fileName,
+          originalData: process.originalData, // Load original JSON
+          fields: process.fields.map((field) => ({
+            name: field.name || "", // Ensure the field name is stored as a string
+            description: field.description || "", // Default to empty string
+            dataType: field.dataType || "string", // Default to "string"
+            validation: field.validation || "", // Default to empty string
+          })),
+          subprocesses: process.subprocesses.map((sub) => ({
+            name: sub.name,
+            fileName: sub.fileName,
+            originalData: sub.originalData, // Load original JSON
+            fields: sub.fields.map((field) => ({
+              name: field.name || "", // Ensure the field name is stored as a string
+              description: field.description || "", // Default to empty string
+              dataType: field.dataType || "string", // Default to "string"
+              validation: field.validation || "", // Default to empty string
+            })),
+          })),
+        }));
+
+        render();
+        alert("Session loaded successfully!");
+      }
+
+      // Function to export the session into individual files
+      async function exportSession() {
+        const handle = await window.showDirectoryPicker();
+
+        for (const process of processes) {
+          const processFolder = await handle.getDirectoryHandle(process.name, {
+            create: true,
+          });
+
+          // Save process file
+          if (process.fileName) {
+            const updatedProcessData = reconstructJson(process.fields);
+            const fileHandle = await processFolder.getFileHandle(
+              process.fileName,
+              {
+                create: true,
+              }
+            );
+            const writable = await fileHandle.createWritable();
+            writable.write(JSON.stringify(updatedProcessData, null, 2)); // Use updated JSON
+            await writable.close();
+          }
+
+          // Save subprocess files
+          for (const sub of process.subprocesses) {
+            if (sub.fileName) {
+              const updatedSubProcessData = reconstructJson(sub.fields);
+              const fileHandle = await processFolder.getFileHandle(
+                sub.fileName,
+                {
+                  create: true,
+                }
+              );
+              const writable = await fileHandle.createWritable();
+              writable.write(JSON.stringify(updatedSubProcessData, null, 2)); // Use updated JSON
+              await writable.close();
+            }
+          }
         }
+
+        alert("Session exported successfully!");
       }
-      return `<span onclick="highlightField('${field}')" class="inline-block px-2 py-1 m-1 rounded-full text-sm cursor-pointer ${highlightClass} style="margin: 5px">${field}</span>`;
-    }
 
-    function highlightField(field) {
-      highlightedField = field;
-      render();
-    }
+      function reconstructJson(fields) {
+        const result = {};
 
-    function updateName(event, pIndex, sIndex = null) {
-      const value = event.target.value;
-      if (sIndex === null) {
-        processes[pIndex].name = value;
-      } else {
-        processes[pIndex].subprocesses[sIndex].name = value;
-      }
-    }
+        fields.forEach((field) => {
+          const segments = field.name.split(".");
+          let current = result;
 
-    function render() {
-      const container = document.getElementById("editor");
-      container.innerHTML = '';
-      processes.forEach((proc, pIndex) => {
-        const processDiv = document.createElement("div");
-        processDiv.className = "border rounded shadow p-4 m-2 bg-white";
-        processDiv.innerHTML = `
-          <div class="mb-2">
-            <input class="border px-2 py-1 rounded w-full" value="${proc.name}" onchange="updateName(event, ${pIndex})">
-            <input type="file" accept=".json" onchange="handleJsonUpload(event, false, ${pIndex})">
-          </div>
-          <div class="text-xs text-gray-500 mb-2">Sequence: ${proc.sequence}</div>
-          <div>${proc.fields.map((f, idx) => renderField(f, pIndex, null, idx)).join('')}</div>
-          <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mt-2" onclick="addSubProcess(${pIndex})">Add Sub-process</button>
-        `;
-
-        proc.subprocesses.forEach((sub, sIndex) => {
-          const subDiv = document.createElement("div");
-          subDiv.className = "border rounded p-2 m-2 bg-gray-100";
-          subDiv.innerHTML = `
-            <input class="border px-2 py-1 rounded w-full" value="${sub.name}" onchange="updateName(event, ${pIndex}, ${sIndex})">
-            <input type="file" accept=".json" onchange="handleJsonUpload(event, true, ${pIndex}, ${sIndex})">
-            <div class="text-xs text-gray-500 mb-1">Sequence: ${sub.sequence}</div>
-            <div>${sub.fields.map((f, idx) => renderField(f, pIndex, sIndex, idx)).join('')}</div>
-          `;
-          processDiv.appendChild(subDiv);
+          // Traverse or create the hierarchy
+          segments.forEach((segment, index) => {
+            if (index === segments.length - 1) {
+              // Last segment: assign the field value or attributes
+              current[segment] = {
+                description: field.description || "",
+                dataType: field.dataType || "string",
+                validation: field.validation || "",
+              };
+            } else {
+              // Intermediate segments: create nested objects if they don't exist
+              if (!current[segment]) {
+                current[segment] = {};
+              }
+              current = current[segment];
+            }
+          });
         });
 
-        container.appendChild(processDiv);
-      });
-    }
-  </script>
-  <script>
-    window.onload = () => {
-      document.getElementById("addBtn").addEventListener("click", addProcess);
-    };
-  </script>
-  <style>
-    .bg-gray-200 { background-color: #e5e7eb; color: #374151; }
-    .bg-green-500 { background-color: #10b981; color: white; }
-    .bg-orange-500 { background-color: #f97316; color: white; }
-  </style>
-</head>
-<body class="p-4">
-  <button id="addBtn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Add Process</button>
-  <div id="editor" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-</body>
+        return result;
+      }
+
+      // Function to render the UI
+      function render() {
+        const container = document.getElementById("editor");
+        container.innerHTML = "";
+        processes.forEach((proc, pIndex) => {
+          // Bounding box for process
+          const processDiv = document.createElement("div");
+          processDiv.className =
+            "border-2 border-blue-500 rounded-lg shadow-lg p-4 m-4 bg-white";
+
+          processDiv.innerHTML = `
+      <div class="mb-4 flex justify-between items-center">
+        <input 
+          type="text" 
+          value="${proc.name}" 
+          class="text-lg font-bold text-blue-600 border-b-2 border-blue-500 focus:outline-none focus:border-blue-700"
+          onchange="updateProcessName(${pIndex}, this.value)"
+        />
+        <button class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600" onclick="removeProcess(${pIndex})">Remove</button>
+      </div>
+      <input type="file" accept=".json" onchange="handleJsonUpload(event, false, ${pIndex})" class="mt-2">
+      <div class="mb-4">
+        <h3 class="text-md font-semibold text-gray-700">Fields:</h3>
+        <div class="flex flex-wrap">${proc.fields
+          .map((f, idx) => renderField(f, pIndex, null, idx))
+          .join("")}</div>
+      </div>
+      <button class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600" onclick="addSubProcess(${pIndex})">Add Sub-process</button>
+    `;
+
+          // Bounding box for subprocesses
+          proc.subprocesses.forEach((sub, sIndex) => {
+            const subDiv = document.createElement("div");
+            subDiv.className =
+              "border border-gray-400 rounded-lg p-3 m-3 bg-gray-50";
+
+            subDiv.innerHTML = `
+        <div class="flex justify-between items-center">
+          <input 
+            type="text" 
+            value="${sub.name}" 
+            class="text-md font-bold text-gray-600 border-b-2 border-gray-400 focus:outline-none focus:border-gray-600"
+            onchange="updateSubProcessName(${pIndex}, ${sIndex}, this.value)"
+          />
+          <button class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600" onclick="removeSubProcess(${pIndex}, ${sIndex})">Remove</button>
+        </div>
+        <input type="file" accept=".json" onchange="handleJsonUpload(event, true, ${pIndex}, ${sIndex})" class="mt-2">
+        <div class="mt-2">
+          <h4 class="text-sm font-semibold text-gray-700">Fields:</h4>
+          <div class="flex flex-wrap">${sub.fields
+            .map((f, idx) => renderField(f, pIndex, sIndex, idx))
+            .join("")}</div>
+        </div>
+      `;
+
+            processDiv.appendChild(subDiv);
+          });
+
+          container.appendChild(processDiv);
+        });
+      }
+
+      function renderField(field, pIndex, sIndex, idx) {
+        let highlightClass = "bg-gray-200 text-gray-700 rounded-full";
+
+        // Determine the highlight class based on the highlightedField
+        if (highlightedField) {
+          if (field?.name === highlightedField) {
+            highlightClass = "bg-green-500 text-white rounded-full"; // Exact match field
+          } else if (isSimilarNode(field?.name, highlightedField)) {
+            highlightClass = "bg-orange-500 text-white rounded-full"; // Similar node match field
+          } else if (isSimilarBranch(field?.name, highlightedField)) {
+            highlightClass = "bg-yellow-500 text-white rounded-full"; // Similar branch match field
+          } else if (isAlmostSimilarNode(field?.name, highlightedField)) {
+            highlightClass = "bg-blue-500 text-white rounded-full"; // AlmostSimilar node match field
+          }
+        }
+
+        // Ensure field attributes are initialized
+        const fieldName = field?.name || `Field ${idx + 1}`; // Fallback to a default name
+        const description = field?.description || ""; // Default to empty string
+        const dataType = field?.dataType || "string"; // Default to "string"
+        const validation = field?.validation || ""; // Default to empty string
+
+        // Tooltip content for field attributes
+        const tooltipContent = `
+    <strong>Field:</strong> ${fieldName}<br>
+    <strong>Description:</strong> ${description || "N/A"}<br>
+    <strong>Data Type:</strong> ${dataType || "N/A"}<br>
+    <strong>Validation:</strong> ${validation || "N/A"}
+  `;
+
+        return `
+    <span 
+      onclick="highlightField('${fieldName}')" 
+      oncontextmenu="editFieldAttributes(event, '${fieldName}', ${pIndex}, ${sIndex}, ${idx})"
+      class="inline-block px-4 py-2 m-2 text-sm cursor-pointer ${highlightClass}" 
+      data-tooltip="${tooltipContent}"
+    >
+      ${fieldName}
+    </span>`;
+      }
+
+      function highlightField(field) {
+        highlightedField = field;
+        render();
+      }
+
+      function editFieldAttributes(event, field, pIndex, sIndex, idx) {
+        event.preventDefault(); // Prevent the default right-click menu
+
+        const fieldData =
+          sIndex !== null
+            ? processes[pIndex].subprocesses[sIndex].fields[idx]
+            : processes[pIndex].fields[idx];
+
+        const lastSegment =
+          fieldData?.name?.split(".").pop() || `Field ${idx + 1}`; // Fallback to default name
+
+        const menu = document.createElement("div");
+        menu.className = "context-menu";
+        menu.style.top = `${event.clientY}px`;
+        menu.style.left = `${event.clientX}px`;
+
+        menu.innerHTML = `
+    <label>
+      Field Name (Last Segment):
+      <input type="text" id="fieldNameInput" value="${lastSegment}">
+    </label>
+    <label>
+      Description:
+      <input type="text" id="descriptionInput" value="${
+        fieldData?.description || ""
+      }">
+    </label>
+    <label>
+      Data Type:
+      <select id="dataTypeInput">
+        <option value="string" ${
+          fieldData?.dataType === "string" ? "selected" : ""
+        }>String</option>
+        <option value="number" ${
+          fieldData?.dataType === "number" ? "selected" : ""
+        }>Number</option>
+        <option value="decimal" ${
+          fieldData?.dataType === "decimal" ? "selected" : ""
+        }>Decimal</option>
+        <option value="enum" ${
+          fieldData?.dataType === "enum" ? "selected" : ""
+        }>Enum</option>
+        <option value="boolean" ${
+          fieldData?.dataType === "boolean" ? "selected" : ""
+        }>Boolean</option>
+        <option value="indicator" ${
+          fieldData?.dataType === "indicator" ? "selected" : ""
+        }>Indicator</option>
+        <option value="datetime" ${
+          fieldData?.dataType === "datetime" ? "selected" : ""
+        }>Datetime</option>
+      </select>
+    </label>
+    <label>
+      Validation:
+      <input type="text" id="validationInput" value="${
+        fieldData?.validation || ""
+      }">
+    </label>
+    <button onclick="saveFieldAttributes('${field}', ${pIndex}, ${sIndex}, ${idx})">Save</button>
+    <button onclick="closeContextMenu()">Cancel</button>
+  `;
+
+        document.body.appendChild(menu);
+      }
+
+      function updateFieldAttribute(pIndex, sIndex, idx, attribute, value) {
+        const fieldData =
+          sIndex !== null
+            ? processes[pIndex].subprocesses[sIndex].fields[idx]
+            : processes[pIndex].fields[idx];
+
+        if (!fieldData) {
+          // Initialize field data if it doesn't exist
+          if (sIndex !== null) {
+            processes[pIndex].subprocesses[sIndex].fields[idx] = {};
+          } else {
+            processes[pIndex].fields[idx] = {};
+          }
+        }
+
+        fieldData[attribute] = value;
+        render(); // Re-render the UI to update tooltips
+      }
+
+      function saveFieldAttributes(field, pIndex, sIndex, idx) {
+        // Retrieve the correct field data object
+        const fieldData =
+          sIndex !== null
+            ? processes[pIndex].subprocesses[sIndex].fields[idx]
+            : processes[pIndex].fields[idx];
+
+        // Get the updated values from the input fields
+        const newLastSegment = document.getElementById("fieldNameInput").value;
+        const description = document.getElementById("descriptionInput").value;
+        const dataType = document.getElementById("dataTypeInput").value;
+        const validation = document.getElementById("validationInput").value;
+
+        // Ensure fieldData exists and update its properties
+        if (fieldData) {
+          // Update only the last segment of the field name
+          const fieldSegments = fieldData.name.split(".");
+          fieldSegments[fieldSegments.length - 1] = newLastSegment;
+          fieldData.name = fieldSegments.join("."); // Reconstruct the full field name
+
+          // Update other attributes
+          fieldData.description = description;
+          fieldData.dataType = dataType;
+          fieldData.validation = validation;
+        } else {
+          // If fieldData doesn't exist, initialize it
+          const fieldSegments = field.split(".");
+          fieldSegments[fieldSegments.length - 1] = newLastSegment;
+
+          const newField = {
+            name: fieldSegments.join("."),
+            description,
+            dataType,
+            validation,
+          };
+
+          if (sIndex !== null) {
+            processes[pIndex].subprocesses[sIndex].fields[idx] = newField;
+          } else {
+            processes[pIndex].fields[idx] = newField;
+          }
+        }
+
+        // Close the context menu and re-render the UI
+        closeContextMenu();
+        render();
+      }
+
+      function closeContextMenu() {
+        const menu = document.querySelector(".context-menu");
+        if (menu) {
+          menu.remove();
+        }
+      }
+      function isSimilar(field1, field2) {
+        // Extract the last segments of both fields
+        const lastSegment1 = field1.split(".").pop();
+        const lastSegment2 = field2.split(".").pop();
+
+        // Check if the last segments are the same but the fields themselves are different
+        return lastSegment1 === lastSegment2 && field1 !== field2;
+      }
+
+      // Function to check if two fields are similar based on their names or content
+      function isSimilarNode(field1, field2) {
+        const lastSegment1 = field1.split(".").pop();
+        const lastSegment2 = field2.split(".").pop();
+        if (lastSegment1 === lastSegment2 && field1 !== field2) return true;
+        else return false;
+      }
+
+      // Function to check if two fields are similar based on their names or content
+      function isSimilarBranch(field1, field2) {
+        const lastSegment1 = field1.split(".").pop();
+        const lastSegment2 = field2.split(".").pop();
+
+        const matchCount = [...field1].filter((ch) =>
+          field2.includes(ch)
+        ).length;
+        const similarity = matchCount / Math.max(field1.length, field2.length);
+        return similarity >= 0.75 && field1 !== field2 ? true : false;
+      }
+
+      // Function to check if two fields are similar based on their names or content
+      function isAlmostSimilarNode(field1, field2) {
+        const lastSegment1 = field1.split(".").pop();
+        const lastSegment2 = field2.split(".").pop();
+        const matchCount = [...lastSegment1].filter((ch) =>
+          lastSegment2.includes(ch)
+        ).length;
+
+        const similarity = matchCount / Math.max(field1.length, field2.length);
+        return similarity >= 0.75 && field1 !== field2 ? true : false;
+      }
+    </script>
+  </head>
+  <body>
+    <header class="bg-blue-600 text-white py-4 shadow-md">
+      <div class="title-box">
+        <h1 class="text-center text-3xl font-bold">Field Mapper</h1>
+      </div>
+    </header>
+
+    <div class="p-4">
+      <button class="action-button" onclick="addProcess()">Add Process</button>
+      <button class="action-button" onclick="saveSession()">
+        Save Session
+      </button>
+      <button class="action-button" onclick="loadSession()">
+        Load Session
+      </button>
+      <button class="action-button" onclick="exportSession()">
+        Export Session
+      </button>
+      <div id="editor"></div>
+    </div>
+  </body>
 </html>
